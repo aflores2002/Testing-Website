@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Wallet Extension Tester</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Bitcoin Wallet Extension Tester</h1>
+        <div id="connection-status">Extension not connected</div>
+
+        <section id="message-signing">
+            <h2>Message Signing</h2>
+            <input type="text" id="message-input" placeholder="Enter message to sign">
+            <button id="sign-message-btn">Sign Message</button>
+            <div id="signature-result"></div>
+        </section>
+
+        <section id="psbt-handling">
+            <h2>PSBT Handling</h2>
+            <textarea id="psbt-input" placeholder="Enter PSBT hex"></textarea>
+            <button id="sign-psbt-btn">Sign PSBT</button>
+            <button id="broadcast-psbt-btn">Broadcast PSBT</button>
+            <div id="psbt-result"></div>
+        </section>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

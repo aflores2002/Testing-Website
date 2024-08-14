@@ -1,0 +1,55 @@
+body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f4;
+    }
+
+    .container {
+        width: 80%;
+        margin: auto;
+        overflow: hidden;
+        padding: 20px;
+    }
+
+    h1, h2 {
+        color: #333;
+    }
+
+    #connection-status {
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    section {
+        background: #fff;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+
+    input[type="text"], textarea {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 10px;
+    }
+
+    button {
+        display: inline-block;
+        background: #333;
+        color: #fff;
+        padding: 10px 20px;
+        border: none;
+        cursor: pointer;
+        margin-right: 10px;
+    }
+
+    button:hover {
+        background: #555;
+    }
+
+    #signature-result, #psbt-result {
+        margin-top: 10px;
+        word-break: break-all;
+    }
