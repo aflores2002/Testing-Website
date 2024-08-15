@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const signPsbtBtn = document.getElementById('sign-psbt-btn');
         const broadcastPsbtBtn = document.getElementById('broadcast-psbt-btn');
         const psbtResult = document.getElementById('psbt-result');
+        const recipientAddressInput = document.getElementById('recipient-address');
+        const amountInput = document.getElementById('amount');
+        const createPsbtBtn = document.getElementById('create-psbt-btn');
 
         let contentScriptLoaded = false;
 
@@ -28,11 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         window.addEventListener("message", handleResponse);
 
-                        // Set a timeout in case the extension doesn't respond
                         setTimeout(() => {
                                 window.removeEventListener("message", handleResponse);
                                 reject(new Error("Extension did not respond in time"));
-                        }, 5000); // 5 second timeout
+                        }, 15000); // Increased timeout to 15 seconds
                 });
         }
 
@@ -76,7 +78,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
         }
 
-        // Event listeners for buttons
+        async function createPSBT(senderAddress, recipientAddress, amountInSatoshis, feeRate = 1) {
+                try {
+                        const response = await sendMessageToExtension({
+                                type: 'FROM_PAGE_CREATE_PSBT',
+                                senderAddress,
+                                recipientAddress,
+                                amountInSatoshis,
+                                feeRate
+                        });
+                        if (response.success) {
+                                console.log('PSBT created:', response.psbtHex);
+                                return response.psbtHex;
+                        } else {
+                                throw new Error(response.error);
+                        }
+                } catch (error) {
+                        console.error('Error creating PSBT:', error);
+                        throw error;
+                }
+        }
+
+        async function getCurrentWalletAddress() {
+                try {
+                        const response = await sendMessageToExtension({ type: "FROM_PAGE_GET_CURRENT_ADDRESS" });
+                        if (response.success) {
+                                return response.address;
+                        } else {
+                                throw new Error(response.error || "Failed to get current wallet address");
+                        }
+                } catch (error) {
+                        console.error('Error getting current wallet address:', error);
+                        alert("Failed to get current wallet address. Please ensure you're logged in to the wallet.");
+                        throw error;
+                }
+        }
+
         signMessageBtn.addEventListener('click', () => {
                 const message = messageInput.value;
                 if (message) {
@@ -98,7 +135,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
         });
 
-        // Listen for messages from the content script
+        createPsbtBtn.addEventListener('click', async () => {
+                const recipientAddress = recipientAddressInput.value;
+                const amount = parseInt(amountInput.value);
+                try {
+                        const senderAddress = await getCurrentWalletAddress();
+                        const psbtHex = await createPSBT(senderAddress, recipientAddress, amount);
+                        psbtResult.textContent = `PSBT: ${psbtHex}`;
+                } catch (error) {
+                        console.error('Error creating PSBT:', error);
+                        alert(`Error creating PSBT: ${error.message}`);
+                }
+        });
+
         window.addEventListener("message", function (event) {
                 if (event.source != window) return;
 
@@ -108,6 +157,5 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
         });
 
-        // Check connection status when the page loads
         checkExtensionConnection();
 });
