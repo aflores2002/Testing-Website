@@ -51,30 +51,42 @@ document.addEventListener('DOMContentLoaded', () => {
         async function signMessage(message) {
                 try {
                         const response = await sendMessageToExtension({ type: "FROM_PAGE_SIGN_MESSAGE", message });
-                        signatureResult.textContent = `Signature: ${response.signature}`;
+                        if (response.success) {
+                                signatureResult.textContent = `Signature: ${response.signature}`;
+                        } else {
+                                signatureResult.textContent = `Error: ${response.message || 'Failed to sign message'}`;
+                        }
                 } catch (error) {
                         console.error('Error signing message:', error);
-                        alert(`Error signing message: ${error.message}`);
+                        signatureResult.textContent = `Error: ${error.message}`;
                 }
         }
 
         async function signPSBT(psbtHex) {
                 try {
                         const response = await sendMessageToExtension({ type: "FROM_PAGE_SIGN_PSBT", psbtHex });
-                        psbtResult.textContent = `Signed PSBT: ${response.signedPsbtHex}`;
+                        if (response.success) {
+                                psbtResult.textContent = `Signed PSBT: ${response.signedPsbtHex}`;
+                        } else {
+                                psbtResult.textContent = `Error: ${response.message || 'Failed to sign PSBT'}`;
+                        }
                 } catch (error) {
                         console.error('Error signing PSBT:', error);
-                        alert(`Error signing PSBT: ${error.message}`);
+                        psbtResult.textContent = `Error: ${error.message}`;
                 }
         }
 
         async function broadcastPSBT(psbtHex) {
                 try {
                         const response = await sendMessageToExtension({ type: "FROM_PAGE_BROADCAST_PSBT", psbtHex });
-                        psbtResult.textContent = `Transaction broadcasted. TXID: ${response.txid}`;
+                        if (response.success) {
+                                psbtResult.textContent = `Transaction broadcasted. TXID: ${response.txid}`;
+                        } else {
+                                psbtResult.textContent = `Error: ${response.message || 'Failed to broadcast PSBT'}`;
+                        }
                 } catch (error) {
                         console.error('Error broadcasting PSBT:', error);
-                        alert(`Error broadcasting PSBT: ${error.message}`);
+                        psbtResult.textContent = `Error: ${error.message}`;
                 }
         }
 
