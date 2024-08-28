@@ -3,13 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bitcoin Wallet Extension Tester</title>
+    <title>Bitcoin Wallet Tester</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Bitcoin Wallet Extension Tester</h1>
-        <div id="connection-status">Extension not connected</div>
+        <h1>Bitcoin Wallet Tester</h1>
+        <div id="wallet-status">Wallet not connected</div>
+
+        <section id="wallet-connection">
+            <h2>Connect Wallet</h2>
+            <button id="connect-wallet-btn">Connect Wallet</button>
+        </section>
+
+        <section id="wallet-info">
+            <h2>Wallet Information</h2>
+            <div id="wallet-address"></div>
+            <div id="wallet-balance"></div>
+        </section>
 
         <section id="message-signing">
             <h2>Message Signing</h2>
@@ -18,19 +29,12 @@
             <div id="signature-result"></div>
         </section>
 
-        <section id="psbt-creation">
-            <h2>PSBT Creation</h2>
+        <section id="transaction">
+            <h2>Send Transaction</h2>
             <input type="text" id="recipient-address" placeholder="Recipient Address">
-            <input type="number" id="amount" placeholder="Amount (in satoshis)">
-            <button id="create-psbt-btn">Create PSBT</button>
-        </section>
-
-        <section id="psbt-handling">
-            <h2>PSBT Handling</h2>
-            <textarea id="psbt-input" placeholder="Enter PSBT hex"></textarea>
-            <button id="sign-psbt-btn">Sign PSBT</button>
-            <button id="broadcast-psbt-btn">Broadcast PSBT</button>
-            <div id="psbt-result"></div>
+            <input type="number" id="amount" placeholder="Amount (in BTC)">
+            <button id="send-transaction-btn">Send Transaction</button>
+            <div id="transaction-result"></div>
         </section>
     </div>
     <script src="script.js"></script>

@@ -1,60 +1,87 @@
+// script.js
 document.addEventListener('DOMContentLoaded', () => {
-        const connectionStatus = document.getElementById('connection-status');
+        const walletStatus = document.getElementById('wallet-status');
+        const connectWalletBtn = document.getElementById('connect-wallet-btn');
+        const walletAddress = document.getElementById('wallet-address');
+        const walletBalance = document.getElementById('wallet-balance');
         const messageInput = document.getElementById('message-input');
         const signMessageBtn = document.getElementById('sign-message-btn');
         const signatureResult = document.getElementById('signature-result');
-        const psbtInput = document.getElementById('psbt-input');
-        const signPsbtBtn = document.getElementById('sign-psbt-btn');
-        const broadcastPsbtBtn = document.getElementById('broadcast-psbt-btn');
-        const psbtResult = document.getElementById('psbt-result');
         const recipientAddressInput = document.getElementById('recipient-address');
         const amountInput = document.getElementById('amount');
-        const createPsbtBtn = document.getElementById('create-psbt-btn');
+        const sendTransactionBtn = document.getElementById('send-transaction-btn');
+        const transactionResult = document.getElementById('transaction-result');
 
-        let contentScriptLoaded = false;
+        let currentAccount = null;
 
-        function sendMessageToExtension(message) {
-                return new Promise((resolve, reject) => {
-                        window.postMessage(message, "*");
-
-                        function handleResponse(event) {
-                                if (event.source !== window) return;
-                                if (event.data.type === "FROM_EXTENSION") {
-                                        window.removeEventListener("message", handleResponse);
-                                        if (event.data.action === "ERROR") {
-                                                reject(new Error(event.data.message));
-                                        } else {
-                                                resolve(event.data);
-                                        }
-                                }
-                        }
-
-                        window.addEventListener("message", handleResponse);
-
-                        setTimeout(() => {
-                                window.removeEventListener("message", handleResponse);
-                                reject(new Error("Extension did not respond in time"));
-                        }, 15000); // Increased timeout to 15 seconds
-                });
-        }
-
-        async function checkExtensionConnection() {
+        async function connectWallet() {
+                console.log('Connecting wallet...');
                 try {
-                        const response = await sendMessageToExtension({ type: "FROM_PAGE_CHECK_CONNECTION" });
-                        connectionStatus.textContent = response.connected ? "Extension connected" : "Extension not connected";
+                        const response = await window.bitcoin.request({ method: 'bitcoin_requestAccounts' });
+                        console.log('Received accounts:', response);
+                        if (response.success && Array.isArray(response.accounts) && response.accounts.length > 0) {
+                                currentAccount = response.accounts[0];
+                                walletStatus.textContent = 'Wallet connected';
+                                walletAddress.textContent = `Address: ${currentAccount}`;
+                                await updateBalance();
+                        } else {
+                                throw new Error('No accounts received');
+                        }
                 } catch (error) {
-                        console.error('Error checking extension connection:', error);
-                        connectionStatus.textContent = "Error connecting to extension";
+                        console.error('Error connecting wallet:', error);
+                        walletStatus.textContent = 'Error connecting wallet';
                 }
         }
 
-        async function signMessage(message) {
+        async function updateBalance() {
+                if (!currentAccount) {
+                        console.error('No account available for balance update');
+                        return;
+                }
                 try {
-                        const response = await sendMessageToExtension({ type: "FROM_PAGE_SIGN_MESSAGE", message });
-                        if (response.success) {
-                                signatureResult.textContent = `Signature: ${response.signature}`;
+                        const result = await window.bitcoin.request({
+                                method: 'bitcoin_getBalance',
+                                params: [currentAccount]
+                        });
+                        console.log('Balance result:', result);
+                        if (result && typeof result.balance === 'number') {
+                                walletBalance.textContent = `Balance: ${result.balance.toFixed(8)} BTC`;
                         } else {
-                                signatureResult.textContent = `Error: ${response.message || 'Failed to sign message'}`;
+                                throw new Error('Invalid balance received');
+                        }
+                } catch (error) {
+                        console.error('Error fetching balance:', error);
+                        walletBalance.textContent = 'Error fetching balance';
+                }
+        }
+
+        async function signMessage() {
+                if (!currentAccount) {
+                        alert('Please connect your wallet first');
+                        return;
+                }
+                const message = messageInput.value;
+                if (!message) {
+                        alert('Please enter a message to sign');
+                        return;
+                }
+                try {
+                        const result = await window.bitcoin.request({
+                                method: 'bitcoin_signMessage',
+                                params: [message, currentAccount]
+                        });
+                        console.log('Sign message result:', result); // Add this line for debugging
+
+                        if (result && result.success) {
+                                if (typeof result.signature === 'string') {
+                                        signatureResult.textContent = `Signature: ${result.signature}`;
+                                } else if (result.signature && typeof result.signature.signature === 'string') {
+                                        signatureResult.textContent = `Signature: ${result.signature.signature}`;
+                                } else {
+                                        throw new Error('Invalid signature format');
+                                }
+                        } else {
+                                throw new Error(result.error || 'Failed to sign message');
                         }
                 } catch (error) {
                         console.error('Error signing message:', error);
@@ -62,112 +89,94 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
         }
 
-        async function signPSBT(psbtHex) {
-                try {
-                        const response = await sendMessageToExtension({ type: "FROM_PAGE_SIGN_PSBT", psbtHex });
-                        if (response.success) {
-                                psbtResult.textContent = `Signed PSBT: ${response.signedPsbtHex}`;
-                        } else {
-                                psbtResult.textContent = `Error: ${response.message || 'Failed to sign PSBT'}`;
-                        }
-                } catch (error) {
-                        console.error('Error signing PSBT:', error);
-                        psbtResult.textContent = `Error: ${error.message}`;
+        async function sendTransaction() {
+                if (!currentAccount) {
+                        alert('Please connect your wallet first');
+                        return;
                 }
-        }
-
-        async function broadcastPSBT(psbtHex) {
-                try {
-                        const response = await sendMessageToExtension({ type: "FROM_PAGE_BROADCAST_PSBT", psbtHex });
-                        if (response.success) {
-                                psbtResult.textContent = `Transaction broadcasted. TXID: ${response.txid}`;
-                        } else {
-                                psbtResult.textContent = `Error: ${response.message || 'Failed to broadcast PSBT'}`;
-                        }
-                } catch (error) {
-                        console.error('Error broadcasting PSBT:', error);
-                        psbtResult.textContent = `Error: ${error.message}`;
-                }
-        }
-
-        async function createPSBT(senderAddress, recipientAddress, amountInSatoshis, feeRate = 1) {
-                try {
-                        const response = await sendMessageToExtension({
-                                type: 'FROM_PAGE_CREATE_PSBT',
-                                senderAddress,
-                                recipientAddress,
-                                amountInSatoshis,
-                                feeRate
-                        });
-                        if (response.success) {
-                                console.log('PSBT created:', response.psbtHex);
-                                return response.psbtHex;
-                        } else {
-                                throw new Error(response.error);
-                        }
-                } catch (error) {
-                        console.error('Error creating PSBT:', error);
-                        throw error;
-                }
-        }
-
-        async function getCurrentWalletAddress() {
-                try {
-                        const response = await sendMessageToExtension({ type: "FROM_PAGE_GET_CURRENT_ADDRESS" });
-                        if (response.success) {
-                                return response.address;
-                        } else {
-                                throw new Error(response.error || "Failed to get current wallet address");
-                        }
-                } catch (error) {
-                        console.error('Error getting current wallet address:', error);
-                        alert("Failed to get current wallet address. Please ensure you're logged in to the wallet.");
-                        throw error;
-                }
-        }
-
-        signMessageBtn.addEventListener('click', () => {
-                const message = messageInput.value;
-                if (message) {
-                        signMessage(message);
-                }
-        });
-
-        signPsbtBtn.addEventListener('click', () => {
-                const psbtHex = psbtInput.value;
-                if (psbtHex) {
-                        signPSBT(psbtHex);
-                }
-        });
-
-        broadcastPsbtBtn.addEventListener('click', () => {
-                const psbtHex = psbtInput.value;
-                if (psbtHex) {
-                        broadcastPSBT(psbtHex);
-                }
-        });
-
-        createPsbtBtn.addEventListener('click', async () => {
                 const recipientAddress = recipientAddressInput.value;
-                const amount = parseInt(amountInput.value);
+                const amount = parseFloat(amountInput.value);
+                if (!recipientAddress || isNaN(amount)) {
+                        alert('Please enter valid recipient address and amount');
+                        return;
+                }
                 try {
-                        const senderAddress = await getCurrentWalletAddress();
-                        const psbtHex = await createPSBT(senderAddress, recipientAddress, amount);
-                        psbtResult.textContent = `PSBT: ${psbtHex}`;
+                        const amountInSatoshis = Math.floor(amount * 100000000); // Convert BTC to satoshis
+                        console.log('Sending transaction:', { from: currentAccount, to: recipientAddress, amount: amountInSatoshis });
+
+                        const createPsbtResult = await window.bitcoin.request({
+                                method: 'bitcoin_createPsbt',
+                                params: [currentAccount, recipientAddress, amountInSatoshis]
+                        });
+
+                        if (!createPsbtResult.success || typeof createPsbtResult.psbtHex !== 'string') {
+                                throw new Error(createPsbtResult.error || 'Failed to create PSBT');
+                        }
+
+                        console.log('Created PSBT:', createPsbtResult.psbtHex);
+
+                        const signPsbtResult = await window.bitcoin.request({
+                                method: 'bitcoin_signPsbt',
+                                params: [createPsbtResult.psbtHex]
+                        });
+
+                        if (!signPsbtResult.success || typeof signPsbtResult.signedPsbtHex !== 'string') {
+                                throw new Error(signPsbtResult.error || 'Failed to sign PSBT');
+                        }
+
+                        console.log('Signed PSBT:', signPsbtResult.signedPsbtHex);
+
+                        const broadcastResult = await window.bitcoin.request({
+                                method: 'bitcoin_broadcastTransaction',
+                                params: [signPsbtResult.signedPsbtHex]
+                        });
+
+                        console.log('Broadcast result:', broadcastResult);
+
+                        if (!broadcastResult.success) {
+                                throw new Error(broadcastResult.error || 'Failed to broadcast transaction');
+                        }
+
+                        transactionResult.textContent = `Transaction sent! TXID: ${broadcastResult.txid}`;
+                        await updateBalance();
                 } catch (error) {
-                        console.error('Error creating PSBT:', error);
-                        alert(`Error creating PSBT: ${error.message}`);
+                        console.error('Error sending transaction:', error);
+                        transactionResult.textContent = `Error: ${error.message}`;
                 }
-        });
+        }
 
-        window.addEventListener("message", function (event) {
-                if (event.source != window) return;
-
-                if (event.data.type === 'CONTENT_SCRIPT_LOADED') {
-                        contentScriptLoaded = true;
-                        checkExtensionConnection();
+        function initializeBitcoinProvider() {
+                if (typeof window.bitcoin !== 'undefined') {
+                        console.log('Bitcoin provider detected');
+                        walletStatus.textContent = 'Wallet extension detected';
+                        window.bitcoin.on('accountsChanged', (accounts) => {
+                                console.log('Accounts changed:', accounts);
+                                currentAccount = accounts[0];
+                                walletAddress.textContent = `Address: ${currentAccount}`;
+                                updateBalance();
+                        });
+                        connectWalletBtn.disabled = false;
+                } else {
+                        console.log('Bitcoin provider not detected');
+                        walletStatus.textContent = 'Wallet extension not detected';
+                        connectWalletBtn.disabled = true;
                 }
-        });
+        }
 
-        checkExtensionConnection();
+        connectWalletBtn.addEventListener('click', connectWallet);
+        signMessageBtn.addEventListener('click', signMessage);
+        ('click', signMessage);
+        sendTransactionBtn.addEventListener('click', sendTransaction);
+
+        // Wait for the bitcoinProviderReady event
+        window.addEventListener('bitcoinProviderReady', initializeBitcoinProvider, { once: true });
+
+        // Fallback: If the event doesn't fire, check after a short delay
+        setTimeout(() => {
+                if (typeof window.bitcoin === 'undefined') {
+                        console.log('Bitcoin provider not detected after timeout');
+                        walletStatus.textContent = 'Wallet extension not detected (timeout)';
+                        connectWalletBtn.disabled = true;
+                }
+        }, 2000);
 });
