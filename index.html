@@ -29,12 +29,20 @@
             <div id="signature-result"></div>
         </section>
 
-        <section id="transaction">
+        <!-- <section id="transaction">
             <h2>Send Transaction</h2>
             <input type="text" id="recipient-address" placeholder="Recipient Address">
             <input type="number" id="amount" placeholder="Amount (in BTC)">
             <button id="send-transaction-btn">Send Transaction</button>
             <div id="transaction-result"></div>
+        </section> -->
+
+        <section id="psbt-generation">
+            <h2>Generate PSBT</h2>
+            <input type="text" id="psbt-recipient-address" placeholder="Recipient Address">
+            <input type="number" id="psbt-amount" placeholder="Amount (satoshis)">
+            <button id="generate-psbt-btn">Generate PSBT</button>
+            <div id="psbt-result"></div>
         </section>
     </div>
     <script src="script.js"></script>
